@@ -1,7 +1,5 @@
 package com.project.lab_week_08
 
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
@@ -21,7 +19,7 @@ class MainActivity : AppCompatActivity() {
     // Create an instance of a work manager
     // Work manager manages all your requests and workers
     // it also sets up the sequence for all your processes
-    private val workManager = WorkManager.getInstance(this)
+    private val workManager by lazy { WorkManager.getInstance(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -76,6 +74,7 @@ class MainActivity : AppCompatActivity() {
         // that's used to make a more reactive application
         // the reactive of it comes from the observe keyword,
         // which observes any data changes and immediately update the app UI
+
         // Here we're observing the returned LiveData and getting the
         // state result of the worker (Can be SUCCEEDED, FAILED, or CANCELLED)
         // isFinished is used to check if the state is either SUCCEEDED or FAILED
