@@ -15,6 +15,7 @@ import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkManager
 import com.project.lab_week_08.worker.FirstWorker
 import com.project.lab_week_08.worker.SecondWorker
+import com.project.lab_week_08.worker.ThirdWorker
 
 class MainActivity : AppCompatActivity() {
 
@@ -30,6 +31,7 @@ class MainActivity : AppCompatActivity() {
             insets
         }
 
+        // Request notification permission for API 33+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
                 android.content.pm.PackageManager.PERMISSION_GRANTED) {
@@ -45,20 +47,31 @@ class MainActivity : AppCompatActivity() {
 
         val id = "001"
 
+        // Create first work request
         val firstRequest = OneTimeWorkRequest.Builder(FirstWorker::class.java)
             .setConstraints(networkConstraints)
             .setInputData(getIdInputData(FirstWorker.INPUT_DATA_ID, id))
             .build()
 
+        // Create second work request
         val secondRequest = OneTimeWorkRequest.Builder(SecondWorker::class.java)
             .setConstraints(networkConstraints)
             .setInputData(getIdInputData(SecondWorker.INPUT_DATA_ID, id))
             .build()
 
+        // Create third work request
+        val thirdRequest = OneTimeWorkRequest.Builder(ThirdWorker::class.java)
+            .setConstraints(networkConstraints)
+            .setInputData(getIdInputData(ThirdWorker.INPUT_DATA_ID, id))
+            .build()
+
+        // Set up work sequence: FirstWorker → SecondWorker → ThirdWorker
         workManager.beginWith(firstRequest)
             .then(secondRequest)
+            .then(thirdRequest)
             .enqueue()
 
+        // Observe first worker completion
         workManager.getWorkInfoByIdLiveData(firstRequest.id)
             .observe(this) { info ->
                 if (info != null && info.state.isFinished) {
@@ -66,11 +79,21 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
+        // Observe second worker completion and launch first notification service
         workManager.getWorkInfoByIdLiveData(secondRequest.id)
             .observe(this) { info ->
                 if (info != null && info.state.isFinished) {
                     showResult("Second process is done")
                     launchNotificationService()
+                }
+            }
+
+        // Observe third worker completion and launch second notification service
+        workManager.getWorkInfoByIdLiveData(thirdRequest.id)
+            .observe(this) { info ->
+                if (info != null && info.state.isFinished) {
+                    showResult("Third process is done")
+                    launchSecondNotificationService()
                 }
             }
     }
@@ -85,6 +108,7 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
+    // Launch the first NotificationService
     private fun launchNotificationService() {
         NotificationService.trackingCompletion.observe(this) { Id ->
             showResult("Process for Notification Channel ID $Id is done!")
@@ -92,6 +116,19 @@ class MainActivity : AppCompatActivity() {
 
         val serviceIntent = Intent(this, NotificationService::class.java).apply {
             putExtra(EXTRA_ID, "001")
+        }
+
+        ContextCompat.startForegroundService(this, serviceIntent)
+    }
+
+    // Launch the second NotificationService
+    private fun launchSecondNotificationService() {
+        SecondNotificationService.trackingCompletion.observe(this) { Id ->
+            showResult("Process for Notification Channel ID $Id is done!")
+        }
+
+        val serviceIntent = Intent(this, SecondNotificationService::class.java).apply {
+            putExtra(SecondNotificationService.EXTRA_ID, "002")
         }
 
         ContextCompat.startForegroundService(this, serviceIntent)
